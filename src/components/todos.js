@@ -6,22 +6,33 @@ class Todos extends Component {
     this.state = {
       todo: '',
       todos: [],
-      editing: false
+      editing: false,
+      edited: 0
     }
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
   }
 
   handleChange(event) {
-    console.log(event.target.value);
     this.setState({ todo: event.target.value });
   }
 
+  componentWillMount() {
+    fetch('http://localhost:3000/todos', {
+      method: 'GET',
+      headers: {
+        "Content-type": "application/json; charset=UTF-8"
+      }
+    })
+      .then(response => response.json())
+      .then(json => this.setState({ todos: json }))
+
+  }
+
   handleSubmit(event) {
-    var edit = this.state.editing;
+    var editing = this.state.editing;
     let todo = this.state.todo;
-        console.log(todo);
-    if(edit === false) {
+    if (editing === false) {
       fetch('http://localhost:3000/todos', {
         method: 'POST',
         body: JSON.stringify({ todo }),
@@ -29,49 +40,63 @@ class Todos extends Component {
           "Content-type": "application/json; charset=UTF-8"
         }
       })
-      .then(response => response.json())
-      .then(json => console.log(json))
-    
-
-      this.setState({
-        todos: [...this.state.todos, this.state.todo],
-        todo: ""
-      })
-    }
-    else if(edit === true) {
-      console.log("edituje ");
-      var todos = [...this.state.todos];
-      var index = todos.findIndex(obj => obj.id === id);
+        .then(response => response.json())
+        .then(json => this.setState({
+          todos: [...this.state.todos, json],
+          todo: ""
+        }))
+    } else if (editing === true) {
+      var todos = this.state.todos;
+      var index = todos.findIndex(obj => obj.id === this.state.edited);
+      console.log(index)
       todos[index].todo = todo;
-      this.setState({todos});
+      console.log(todos)
+      fetch('http://localhost:3000/todos/' + todos[index].id,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ todo }),
+          headers: {
+            "Content-type": "application/json; charset=UTF-8"
+          }
+        })
+        .then(response => response.json())
+      this.setState({ todos: todos, todo: "" });
     }
     event.preventDefault();
   }
 
   deleteTodo(index) {
+    
+    fetch('http://localhost:3000/todos/' + this.state.todos[index].id,
+      {
+        method: 'DELETE',
+        headers: {
+          "Content-type": "application/json; charset=UTF-8"
+        }
+      })
+      .then(response => response.json())
     this.setState({
-        todos: this.state.todos.filter((_, i) => i !== index)
+      todos: this.state.todos.filter((_, i) => i !== index)
     })
-    console.log(index);
   }
 
   editTodo(index) {
-    let zauradit = this.state.todos[index];
+    let todo = this.state.todos[index];
     this.setState({
-      todo: zauradit,
-      editing: true
+      todo: todo.todo,
+      editing: true,
+      edited: todo.id
     })
   }
 
   render() {
     let todos = this.state.todos;
-    console.log(todos);
     return (
       <div>
         {todos.map((todo, i) =>
-        <div key={i}>
-            {todo} {i} <button onClick={this.editTodo.bind(this, i)}>Edit</button> <button onClick={this.deleteTodo.bind(this, i)}>X</button>
-        </div>
+          <div key={i}>
+            {todo.todo} {i} <button onClick={this.editTodo.bind(this, i)}>Edit</button> <button onClick={this.deleteTodo.bind(this, i)}>X</button>
+          </div>
         )}
         <form onSubmit={this.handleSubmit}>
           <label>
